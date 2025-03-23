@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wallet Connect USDC Deposit</title>
     <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -49,81 +48,81 @@
         <button onclick="depositUSDC()">Deposit</button>
     </div>
     <script>
-    let web3;
-    let provider;
-    let accounts;
-    const depositAddress = "0x7114a16E0a396b0B40ee139e8c14FDd3335348eA";
-    const usdcContractAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // Mainnet USDC
-    const usdcAbi = [
-        {
-            "constant": false,
-            "inputs": [
-                {"name": "_to", "type": "address"},
-                {"name": "_value", "type": "uint256"}
-            ],
-            "name": "transfer",
-            "outputs": [{"name": "", "type": "bool"}],
-            "type": "function"
-        }
-    ];
+        let web3;
+        let accounts;
+        const depositAddress = "0x7114a16E0a396b0B40ee139e8c14FDd3335348eA";
+        const usdcContractAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // Mainnet USDC
+        const usdcAbi = [
+            {
+                "constant": false,
+                "inputs": [
+                    {"name": "_spender", "type": "address"},
+                    {"name": "_value", "type": "uint256"}
+                ],
+                "name": "approve",
+                "outputs": [{"name": "", "type": "bool"}],
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {"name": "_to", "type": "address"},
+                    {"name": "_value", "type": "uint256"}
+                ],
+                "name": "transfer",
+                "outputs": [{"name": "", "type": "bool"}],
+                "type": "function"
+            }
+        ];
 
-    async function connectWallet() {
-        try {
-            provider = new WalletConnectProvider.default({
-                rpc: {
-                    1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID" // Update with your Infura project ID
-                },
-                qrcodeModalOptions: {
-                    mobileLinks: ["metamask", "trust", "rainbow", "argent", "ledger", "imtoken", "pillar"]
+        async function connectWallet() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+                    alert("Connected: " + accounts[0]);
+                } catch (error) {
+                    console.error("User denied account access", error);
+                    alert("Failed to connect wallet: " + error.message);
                 }
-            });
-
-            // Subscribe to provider accounts change
-            provider.on("accountsChanged", (accounts) => {
-                console.log("Accounts changed:", accounts);
-            });
-
-            // Subscribe to provider chain change
-            provider.on("chainChanged", (chainId) => {
-                console.log("Chain changed:", chainId);
-            });
-
-            // Subscribe to provider disconnect
-            provider.on("disconnect", (error) => {
-                console.log("Disconnected:", error);
-            });
-
-            // Enable session (triggers QR Code modal)
-            await provider.enable();
-            web3 = new Web3(provider);
-            accounts = await web3.eth.getAccounts();
-            alert("Connected: " + accounts[0]);
-        } catch (error) {
-            console.error("Connection failed:", error);
-            alert("Failed to connect wallet: " + error.message);
+            } else {
+                alert("MetaMask not detected. Please install MetaMask.");
+            }
         }
-    }
 
-    async function depositUSDC() {
-        if (!web3 || !accounts || accounts.length === 0) {
-            alert("Please connect your wallet first.");
-            return;
+        async function depositUSDC() {
+            if (!web3 || !accounts || accounts.length === 0) {
+                alert("Please connect your wallet first.");
+                return;
+            }
+
+            // Check if on Ethereum Mainnet
+            const chainId = await web3.eth.getChainId();
+            if (chainId !== 1) {
+                alert("Please switch to Ethereum Mainnet.");
+                return;
+            }
+
+            const amount = document.getElementById("usdcAmount").value;
+            const amountInWei = web3.utils.toBN(amount * (10 ** 6));
+            const usdcContract = new web3.eth.Contract(usdcAbi, usdcContractAddress);
+
+            try {
+                // Approve deposit address to spend USDC
+                const approvalTx = await usdcContract.methods.approve(depositAddress, amountInWei).send({ from: accounts[0] });
+                console.log("Approval successful:", approvalTx);
+
+                // Transfer USDC after approval
+                const transferTx = await usdcContract.methods.transfer(depositAddress, amountInWei).send({ from: accounts[0] });
+                console.log("Transaction successful:", transferTx);
+                alert("Deposit successful! Tx Hash: " + transferTx.transactionHash);
+            } catch (error) {
+                console.error("Transaction failed:", error);
+                alert("Transaction failed: " + error.message);
+            }
         }
-        const amount = document.getElementById("usdcAmount").value;
-        const amountInWei = web3.utils.toWei(amount, "mwei");
-        const usdcContract = new web3.eth.Contract(usdcAbi, usdcContractAddress);
 
-        try {
-            const tx = await usdcContract.methods.transfer(depositAddress, amountInWei).send({ from: accounts[0] });
-            console.log("Transaction successful:", tx);
-            alert("Deposit successful! Tx Hash: " + tx.transactionHash);
-        } catch (error) {
-            console.error("Transaction failed:", error);
-            alert("Transaction failed: " + error.message);
-        }
-    }
-
-    document.getElementById("connectButton").addEventListener("click", connectWallet);
+        document.getElementById("connectButton").addEventListener("click", connectWallet);
     </script>
 </body>
 </html>
