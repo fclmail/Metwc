@@ -70,8 +70,12 @@
             provider = new WalletConnectProvider.default({
                 rpc: {
                     1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+                },
+                qrcodeModalOptions: {
+                    mobileLinks: ["metamask", "trust", "rainbow", "argent", "ledger", "imtoken", "pillar"]
                 }
             });
+            
             await provider.enable();
             web3 = new Web3(provider);
             accounts = await web3.eth.getAccounts();
@@ -92,20 +96,12 @@
         const usdcContract = new web3.eth.Contract(usdcAbi, usdcContractAddress);
 
         try {
-            await usdcContract.methods.transfer(depositAddress, amountInWei).send({ from: accounts[0] })
-                .on('transactionHash', function(hash){
-                    alert("Transaction sent: " + hash);
-                })
-                .on('receipt', function(receipt){
-                    alert("Deposit successful!");
-                })
-                .on('error', function(error){
-                    console.error("Transaction failed:", error);
-                    alert("Transaction failed: " + error.message);
-                });
+            const tx = await usdcContract.methods.transfer(depositAddress, amountInWei).send({ from: accounts[0] });
+            console.log("Transaction successful:", tx);
+            alert("Deposit successful! Tx Hash: " + tx.transactionHash);
         } catch (error) {
-            console.error("Error during transaction:", error);
-            alert("Error: " + error.message);
+            console.error("Transaction failed:", error);
+            alert("Transaction failed: " + error.message);
         }
     }
 </script>
