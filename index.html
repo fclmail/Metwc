@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +36,7 @@
 <body>
     <div class="container">
         <h2>Deposit USDC</h2>
-        <button onclick="connectWallet()">Connect Wallet</button>
+        <button id="connectButton">Connect Wallet</button>
         <br>
         <select id="usdcAmount">
             <option value="0.01">0.01 USDC</option>
@@ -46,12 +47,13 @@
         </select>
         <br>
         <button onclick="depositUSDC()">Deposit</button>
-    </div><script>
+    </div>
+    <script>
     let web3;
     let provider;
     let accounts;
     const depositAddress = "0x7114a16E0a396b0B40ee139e8c14FDd3335348eA";
-    const usdcContractAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // Mainnet USDC, replace for testnet
+    const usdcContractAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // Mainnet USDC
     const usdcAbi = [
         {
             "constant": false,
@@ -69,20 +71,36 @@
         try {
             provider = new WalletConnectProvider.default({
                 rpc: {
-                    1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+                    1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID" // Update with your Infura project ID
                 },
                 qrcodeModalOptions: {
                     mobileLinks: ["metamask", "trust", "rainbow", "argent", "ledger", "imtoken", "pillar"]
                 }
             });
-            
+
+            // Subscribe to provider accounts change
+            provider.on("accountsChanged", (accounts) => {
+                console.log("Accounts changed:", accounts);
+            });
+
+            // Subscribe to provider chain change
+            provider.on("chainChanged", (chainId) => {
+                console.log("Chain changed:", chainId);
+            });
+
+            // Subscribe to provider disconnect
+            provider.on("disconnect", (error) => {
+                console.log("Disconnected:", error);
+            });
+
+            // Enable session (triggers QR Code modal)
             await provider.enable();
             web3 = new Web3(provider);
             accounts = await web3.eth.getAccounts();
             alert("Connected: " + accounts[0]);
         } catch (error) {
             console.error("Connection failed:", error);
-            alert("Failed to connect wallet.");
+            alert("Failed to connect wallet: " + error.message);
         }
     }
 
@@ -104,7 +122,8 @@
             alert("Transaction failed: " + error.message);
         }
     }
-</script>
 
+    document.getElementById("connectButton").addEventListener("click", connectWallet);
+    </script>
 </body>
 </html>
