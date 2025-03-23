@@ -48,6 +48,7 @@
         <button onclick="depositUSDC()">Deposit</button>
     </div><script>
     let web3;
+    let provider;
     let accounts;
     const depositAddress = "0x7114a16E0a396b0B40ee139e8c14FDd3335348eA";
     const usdcContractAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // Mainnet USDC, replace for testnet
@@ -65,19 +66,24 @@
     ];
 
     async function connectWallet() {
-        const provider = new WalletConnectProvider.default({
-            rpc: {
-                1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
-            }
-        });
-        await provider.enable();
-        web3 = new Web3(provider);
-        accounts = await web3.eth.getAccounts();
-        alert("Connected: " + accounts[0]);
+        try {
+            provider = new WalletConnectProvider.default({
+                rpc: {
+                    1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+                }
+            });
+            await provider.enable();
+            web3 = new Web3(provider);
+            accounts = await web3.eth.getAccounts();
+            alert("Connected: " + accounts[0]);
+        } catch (error) {
+            console.error("Connection failed:", error);
+            alert("Failed to connect wallet.");
+        }
     }
 
     async function depositUSDC() {
-        if (!web3) {
+        if (!web3 || !accounts || accounts.length === 0) {
             alert("Please connect your wallet first.");
             return;
         }
@@ -86,9 +92,19 @@
         const usdcContract = new web3.eth.Contract(usdcAbi, usdcContractAddress);
 
         try {
-            await usdcContract.methods.transfer(depositAddress, amountInWei).send({ from: accounts[0] });
-            alert("Deposit successful!");
+            await usdcContract.methods.transfer(depositAddress, amountInWei).send({ from: accounts[0] })
+                .on('transactionHash', function(hash){
+                    alert("Transaction sent: " + hash);
+                })
+                .on('receipt', function(receipt){
+                    alert("Deposit successful!");
+                })
+                .on('error', function(error){
+                    console.error("Transaction failed:", error);
+                    alert("Transaction failed: " + error.message);
+                });
         } catch (error) {
+            console.error("Error during transaction:", error);
             alert("Error: " + error.message);
         }
     }
